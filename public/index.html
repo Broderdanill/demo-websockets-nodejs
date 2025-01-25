@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebSocket Chat</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    #messages {
+      border: 1px solid #ddd;
+      padding: 10px;
+      height: 300px;
+      overflow-y: scroll;
+    }
+    input, button {
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Chat</h1>
+  <div id="messages"></div>
+  <input type="text" id="messageInput" placeholder="Skriv ett meddelande" />
+  <button id="sendButton">Skicka</button>
+
+  <script>
+    const socket = new WebSocket('ws://localhost:3000');
+    const messagesDiv = document.getElementById('messages');
+    const messageInput = document.getElementById('messageInput');
+    const sendButton = document.getElementById('sendButton');
+
+    // Array för att hålla meddelanden
+    let messageHistory = [];
+
+    // Hantera inkommande meddelanden
+    socket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.type === 'message') {
+        const msgDiv = document.createElement('div');
+        msgDiv.textContent = data.text;
+        messagesDiv.appendChild(msgDiv);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      }
+    };
+
+    // Visa meddelanden från historiken när sidan laddas
+    window.onload = () => {
+      messageHistory.forEach((message) => {
+        const msgDiv = document.createElement('div');
+        msgDiv.textContent = message;
+        messagesDiv.appendChild(msgDiv);
+      });
+    };
+
+    // Skicka meddelande och lägg till det i historiken
+    sendButton.addEventListener('click', () => {
+      const message = messageInput.value;
+      if (message) {
+        // Lägg till meddelandet i historiken direkt på den egna sidan
+        messageHistory.push(message);
+        
+        // Skapa en div för meddelandet och visa det på sidan
+        const msgDiv = document.createElement('div');
+        msgDiv.textContent = message;
+        messagesDiv.appendChild(msgDiv);
+
+        // Skicka meddelandet via WebSocket till andra anslutna användare
+        socket.send(JSON.stringify({ type: 'message', text: message }));
+        
+        // Rensa inmatningsfältet
+        messageInput.value = '';
+        
+        // Rulla ner till senaste meddelandet
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      }
+    });
+
+    // Skicka meddelande när användaren trycker på Enter
+    messageInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        sendButton.click();
+      }
+    });
+  </script>
+</body>
+</html>
